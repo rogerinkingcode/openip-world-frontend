@@ -1,0 +1,444 @@
+@import "tailwindcss";
+
+/* Tema escuro por classe: o layout raiz aplica "dark" no <html> antes da pintura
+   e o ThemeContext só alterna a classe. */
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-*: initial;
+
+  /* Breakpoints do tema multiplicados por --app-zoom (0.875). Media queries
+     medem a janela em px reais, sem o zoom; escalar aqui faz o layout trocar
+     nos mesmos pontos em que trocaria com o zoom do navegador. Ao mudar o zoom,
+     recalcule (valor original × zoom) e ajuste também SidebarContext e AppHeader. */
+  --breakpoint-*: initial;
+  --breakpoint-2xsm: 328px;
+  --breakpoint-xsm: 372px;
+  --breakpoint-3xl: 1750px;
+  --breakpoint-sm: 560px;
+  --breakpoint-md: 672px;
+  --breakpoint-lg: 896px;
+  --breakpoint-xl: 1120px;
+  --breakpoint-2xl: 1344px;
+
+  --text-title-2xl: 72px;
+  --text-title-2xl--line-height: 90px;
+  --text-title-xl: 60px;
+  --text-title-xl--line-height: 72px;
+  --text-title-lg: 48px;
+  --text-title-lg--line-height: 60px;
+  --text-title-md: 36px;
+  --text-title-md--line-height: 44px;
+  --text-title-sm: 30px;
+  --text-title-sm--line-height: 38px;
+  --text-theme-xl: 20px;
+  --text-theme-xl--line-height: 30px;
+  --text-theme-sm: 14px;
+  --text-theme-sm--line-height: 20px;
+  --text-theme-xs: 12px;
+  --text-theme-xs--line-height: 18px;
+
+  --color-current: currentColor;
+  --color-transparent: transparent;
+  --color-white: #ffffff;
+  --color-black: #101828;
+
+  --color-brand-25: #f2f7ff;
+  --color-brand-50: #ecf3ff;
+  --color-brand-100: #dde9ff;
+  --color-brand-200: #c2d6ff;
+  --color-brand-300: #9cb9ff;
+  --color-brand-400: #7592ff;
+  --color-brand-500: #465fff;
+  --color-brand-600: #3641f5;
+  --color-brand-700: #2a31d8;
+  --color-brand-800: #252dae;
+  --color-brand-900: #262e89;
+  --color-brand-950: #161950;
+
+  --color-blue-light-25: #f5fbff;
+  --color-blue-light-50: #f0f9ff;
+  --color-blue-light-100: #e0f2fe;
+  --color-blue-light-200: #b9e6fe;
+  --color-blue-light-300: #7cd4fd;
+  --color-blue-light-400: #36bffa;
+  --color-blue-light-500: #0ba5ec;
+  --color-blue-light-600: #0086c9;
+  --color-blue-light-700: #026aa2;
+  --color-blue-light-800: #065986;
+  --color-blue-light-900: #0b4a6f;
+  --color-blue-light-950: #062c41;
+
+  --color-gray-25: #fcfcfd;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f2f4f7;
+  --color-gray-200: #e4e7ec;
+  --color-gray-300: #d0d5dd;
+  --color-gray-400: #98a2b3;
+  --color-gray-500: #667085;
+  --color-gray-600: #475467;
+  --color-gray-700: #344054;
+  --color-gray-800: #1d2939;
+  --color-gray-900: #101828;
+  --color-gray-950: #0c111d;
+  --color-gray-dark: #1a2231;
+
+  --color-orange-25: #fffaf5;
+  --color-orange-50: #fff6ed;
+  --color-orange-100: #ffead5;
+  --color-orange-200: #fddcab;
+  --color-orange-300: #feb273;
+  --color-orange-400: #fd853a;
+  --color-orange-500: #fb6514;
+  --color-orange-600: #ec4a0a;
+  --color-orange-700: #c4320a;
+  --color-orange-800: #9c2a10;
+  --color-orange-900: #7e2410;
+  --color-orange-950: #511c10;
+
+  --color-success-25: #f6fef9;
+  --color-success-50: #ecfdf3;
+  --color-success-100: #d1fadf;
+  --color-success-200: #a6f4c5;
+  --color-success-300: #6ce9a6;
+  --color-success-400: #32d583;
+  --color-success-500: #12b76a;
+  --color-success-600: #039855;
+  --color-success-700: #027a48;
+  --color-success-800: #05603a;
+  --color-success-900: #054f31;
+  --color-success-950: #053321;
+
+  --color-error-25: #fffbfa;
+  --color-error-50: #fef3f2;
+  --color-error-100: #fee4e2;
+  --color-error-200: #fecdca;
+  --color-error-300: #fda29b;
+  --color-error-400: #f97066;
+  --color-error-500: #f04438;
+  --color-error-600: #d92d20;
+  --color-error-700: #b42318;
+  --color-error-800: #912018;
+  --color-error-900: #7a271a;
+  --color-error-950: #55160c;
+
+  --color-warning-25: #fffcf5;
+  --color-warning-50: #fffaeb;
+  --color-warning-100: #fef0c7;
+  --color-warning-200: #fedf89;
+  --color-warning-300: #fec84b;
+  --color-warning-400: #fdb022;
+  --color-warning-500: #f79009;
+  --color-warning-600: #dc6803;
+  --color-warning-700: #b54708;
+  --color-warning-800: #93370d;
+  --color-warning-900: #7a2e0e;
+  --color-warning-950: #4e1d09;
+
+  --color-theme-pink-500: #ee46bc;
+
+  --color-theme-purple-500: #7a5af8;
+
+  --shadow-theme-md:
+    0px 4px 8px -2px rgba(16, 24, 40, 0.1),
+    0px 2px 4px -2px rgba(16, 24, 40, 0.06);
+  --shadow-theme-lg:
+    0px 12px 16px -4px rgba(16, 24, 40, 0.08),
+    0px 4px 6px -2px rgba(16, 24, 40, 0.03);
+  --shadow-theme-sm:
+    0px 1px 3px 0px rgba(16, 24, 40, 0.1),
+    0px 1px 2px 0px rgba(16, 24, 40, 0.06);
+  --shadow-theme-xs: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
+  --shadow-theme-xl:
+    0px 20px 24px -4px rgba(16, 24, 40, 0.08),
+    0px 8px 8px -4px rgba(16, 24, 40, 0.03);
+  --shadow-focus-ring: 0px 0px 0px 4px rgba(70, 95, 255, 0.12);
+  --shadow-tooltip:
+    0px 4px 6px -2px rgba(16, 24, 40, 0.05),
+    -8px 0px 20px 8px rgba(16, 24, 40, 0.05);
+
+  --drop-shadow-4xl:
+    0 35px 35px rgba(0, 0, 0, 0.25), 0 45px 65px rgba(0, 0, 0, 0.15);
+
+  --z-index-1: 1;
+  --z-index-9: 9;
+  --z-index-99: 99;
+  --z-index-999: 999;
+  --z-index-9999: 9999;
+  --z-index-99999: 99999;
+  --z-index-999999: 999999;
+}
+
+/* A Outfit vem do next/font, que publica a família numa variável no <html>.
+   "inline" faz o utilitário font-outfit usar a variável direto. */
+@theme inline {
+  --font-outfit: var(--font-outfit-next), Outfit, sans-serif;
+}
+
+/*
+  A cor de borda padrão virou `currentColor` no Tailwind v4. Como no tema,
+  voltamos ao gray-200 para que bordas sem cor explícita continuem iguais.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  body {
+    @apply relative font-normal font-outfit z-1 bg-gray-50;
+  }
+  /* Escala a interface inteira como o "diminuir zoom" do navegador: fontes,
+     ícones, espaçamentos e bordas encolhem na mesma proporção. Unidades de
+     viewport (vh/vw) também são multiplicadas pelo zoom — por isso as alturas de
+     tela cheia usam os utilitários *-app-screen abaixo, que compensam. */
+  :root {
+    --app-zoom: 0.875;
+    zoom: var(--app-zoom);
+  }
+
+  /* Controles nativos (scrollbar, date picker) acompanham o tema escuro. */
+  .dark {
+    color-scheme: dark;
+  }
+}
+
+@utility menu-item {
+  @apply relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-lg text-theme-sm;
+}
+
+@utility menu-item-active {
+  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
+}
+
+@utility menu-item-inactive {
+  @apply text-gray-700 hover:bg-gray-100 group-hover:text-gray-700 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-gray-300;
+}
+
+@utility menu-item-icon {
+  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400;
+}
+
+@utility menu-item-icon-active {
+  @apply text-brand-500 dark:text-brand-400;
+}
+
+@utility menu-item-icon-inactive {
+  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300;
+}
+
+@utility menu-item-arrow {
+  @apply relative;
+}
+
+@utility menu-item-arrow-active {
+  @apply rotate-180 text-brand-500 dark:text-brand-400;
+}
+
+@utility menu-item-arrow-inactive {
+  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300;
+}
+
+@utility menu-dropdown-item {
+  @apply relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-theme-sm font-medium;
+}
+
+@utility menu-dropdown-item-active {
+  @apply bg-brand-50 text-brand-500 dark:bg-brand-500/[0.12] dark:text-brand-400;
+}
+
+@utility menu-dropdown-item-inactive {
+  @apply text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/5;
+}
+
+@utility menu-dropdown-badge {
+  @apply block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase text-brand-500 dark:text-brand-400;
+}
+
+@utility menu-dropdown-badge-active {
+  @apply bg-brand-100 dark:bg-brand-500/20;
+}
+
+@utility menu-dropdown-badge-inactive {
+  @apply bg-brand-50 group-hover:bg-brand-100 dark:bg-brand-500/15 dark:group-hover:bg-brand-500/20;
+}
+
+@utility no-scrollbar {
+  /* Chrome, Safari and Opera */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+@utility custom-scrollbar {
+  &::-webkit-scrollbar {
+    @apply size-1.5;
+  }
+
+  &::-webkit-scrollbar-track {
+    @apply rounded-full;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    @apply bg-gray-200 rounded-full dark:bg-gray-700;
+  }
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #344054;
+}
+
+/* Substitutos de h-screen/min-h-screen e dos limites do modal: com o zoom no
+   <html>, 100vh vira 87,5% da janela; dividir pelo zoom devolve a tela cheia.
+
+   São CSS comum dentro de @layer utilities, e não @utility, de propósito:
+   @utility só entra no CSS quando o Tailwind detecta a classe nos arquivos, e o
+   dev server chegou a servir o CSS sem elas (login pela metade da tela). Assim
+   as regras existem sempre, em dev e em produção. */
+@layer utilities {
+  .h-app-screen {
+    height: calc(100vh / var(--app-zoom));
+  }
+
+  .min-h-app-screen {
+    min-height: calc(100vh / var(--app-zoom));
+  }
+
+  .w-modal {
+    width: min(36rem, calc(100vw / var(--app-zoom) - 2rem));
+  }
+
+  .max-h-modal {
+    max-height: calc(100dvh / var(--app-zoom) - 2rem);
+  }
+}
+
+/* ---------- Modal nativo <dialog> ----------
+ *
+ * Centralização: é a margem automática que centraliza um <dialog> aberto com
+ * showModal(). O preflight do Tailwind zera a margem de todo elemento (e do
+ * ::backdrop), então sem o `margin: auto` abaixo a caixa encosta no topo.
+ *
+ * Animação: `display` e `overlay` são propriedades discretas — sem
+ * `allow-discrete` o navegador as troca de uma vez e não há transição de saída,
+ * porque o dialog deixa o top layer imediatamente. O @starting-style define o
+ * estado inicial da entrada, que sem ele não teria de onde animar.
+ *
+ * Backdrop: o do tema é gray-400 a 50% com desfoque de 32px.
+ */
+.modal {
+  margin: auto;
+  opacity: 0;
+  transform: translateY(0.75rem) scale(0.97);
+  transition:
+    opacity 200ms ease-out,
+    transform 200ms ease-out,
+    overlay 200ms ease-out allow-discrete,
+    display 200ms ease-out allow-discrete;
+}
+
+.modal[open] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+@starting-style {
+  .modal[open] {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.97);
+  }
+}
+
+.modal::backdrop {
+  background-color: rgb(152 162 179 / 0);
+  backdrop-filter: blur(0);
+  transition:
+    background-color 200ms ease-out,
+    backdrop-filter 200ms ease-out,
+    overlay 200ms ease-out allow-discrete,
+    display 200ms ease-out allow-discrete;
+}
+
+.modal[open]::backdrop {
+  background-color: rgb(152 162 179 / 0.5);
+  backdrop-filter: blur(32px);
+}
+
+@starting-style {
+  .modal[open]::backdrop {
+    background-color: rgb(152 162 179 / 0);
+    backdrop-filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal,
+  .modal::backdrop {
+    transition-duration: 1ms;
+  }
+}
+
+/* ---------- Toast ----------
+ *
+ * A região é um popover "manual" (entra no top layer, por cima até de um
+ * <dialog> modal). As regras abaixo desfazem o estilo padrão de [popover]
+ * (centralizado, com borda, fundo e padding) e prendem a pilha no canto
+ * inferior direito. A região não recebe clique; só os toasts.
+ */
+.toast-region {
+  position: fixed;
+  inset: auto 1rem 1rem auto;
+  width: min(20rem, calc(100vw / var(--app-zoom) - 2rem));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* 560px = breakpoint sm (640px) × --app-zoom. */
+@media (min-width: 560px) {
+  .toast-region {
+    inset: auto 1.5rem 1.5rem auto;
+  }
+}
+
+/* Durações devem acompanhar TOAST_EXIT_MS em components/ui/toast/Toast.tsx. */
+.toast {
+  pointer-events: auto;
+  animation: toast-in 200ms ease-out;
+}
+
+.toast[data-leaving="true"] {
+  animation: toast-out 200ms ease-in forwards;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.98);
+  }
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(0.25rem) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .toast[data-leaving="true"] {
+    animation-duration: 1ms;
+  }
+}

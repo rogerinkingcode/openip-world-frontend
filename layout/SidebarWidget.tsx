@@ -1,0 +1,22 @@
+import Link from "next/link";
+
+export default function SidebarWidget({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <div className="mx-auto mb-10 w-full max-w-60 rounded-2xl bg-gray-50 px-4 py-5 text-center dark:bg-white/[0.03]">
+      <h3 className="mb-2 font-semibold text-gray-900 dark:text-white">
+        API OpenIP World
+      </h3>
+      <p className="mb-4 text-gray-500 text-theme-sm dark:text-gray-400">
+        Gere tokens de acesso e consulte as bases do INPI e do TMView direto dos
+        seus sistemas.
+      </p>
+      <Link
+        href="/tokens"
+        onClick={onNavigate}
+        className="flex items-center justify-center p-3 font-medium text-white rounded-lg bg-brand-500 text-theme-sm hover:bg-brand-600"
+      >
+        Gerenciar tokens
+      </Link>
+    </div>
+  );
+}
