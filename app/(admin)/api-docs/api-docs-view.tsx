@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Alert from "@/components/ui/alert/Alert";
 import Badge from "@/components/ui/badge/Badge";
 import { useUser } from "@/context/UserContext";
-import { BASE_URL, GRUPOS, type Endpoint, type Resposta } from "@/lib/api-docs";
+import { BASE_URL, SECOES, type Endpoint, type Resposta, type SecaoDocs } from "@/lib/api-docs";
+import { COR_TOKEN, destacar } from "@/lib/destaque-codigo";
 
 /**
  * Página de referência da API para os clientes.
@@ -40,15 +41,45 @@ function ApiDocs() {
     <div className="flex flex-col gap-6 xl:flex-row">
       <Sumario />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-6">
+      <div className="flex min-w-0 flex-1 flex-col gap-10">
         <Introducao />
 
-        {GRUPOS.map((grupo) => (
-          <section key={grupo.id} id={grupo.id} className="scroll-mt-24">
+        {SECOES.map((secao) => (
+          <Secao key={secao.id} secao={secao} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Uma fonte de dados (INPI, TMView) ou o bloco comum. O cabeçalho em destaque
+ * marca onde uma fonte termina e a outra começa — sem ele, "Marcas" do INPI e
+ * do TMView ficariam indistinguíveis na rolagem.
+ */
+function Secao({ secao }: { secao: SecaoDocs }) {
+  return (
+    <section id={secao.id} className="scroll-mt-24">
+      <div className="mb-6 rounded-2xl border border-brand-200 bg-brand-25 p-5 dark:border-brand-500/30 dark:bg-brand-500/[0.06]">
+        <h2 className="text-2xl font-semibold text-gray-800 dark:text-white/90">{secao.titulo}</h2>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{secao.descricao}</p>
+
+        {secao.notas && secao.notas.length > 0 && (
+          <ul className="mt-3 flex list-disc flex-col gap-1 pl-5 text-theme-sm text-gray-600 dark:text-gray-300">
+            {secao.notas.map((nota) => (
+              <li key={nota}>{nota}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-8">
+        {secao.grupos.map((grupo) => (
+          <div key={grupo.id} id={grupo.id} className="scroll-mt-24">
             <div className="mb-4">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-white/90">
                 {grupo.titulo}
-              </h2>
+              </h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {grupo.descricao}
               </p>
@@ -59,10 +90,10 @@ function ApiDocs() {
                 <CartaoEndpoint key={endpoint.id} endpoint={endpoint} />
               ))}
             </div>
-          </section>
+          </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -104,19 +135,32 @@ function Sumario() {
         <p className="mb-3 text-theme-xs font-semibold uppercase tracking-wide text-gray-400">
           Nesta página
         </p>
-        <ul className="flex flex-col gap-2">
-          {GRUPOS.map((grupo) => (
-            <li key={grupo.id}>
+        <div className="flex flex-col divide-y divide-gray-200 dark:divide-gray-800">
+          {SECOES.map((secao) => (
+            <div key={secao.id} className="py-3 first:pt-0 last:pb-0">
               <a
-                href={`#${grupo.id}`}
-                onClick={(evento) => rolarAte(evento, grupo.id)}
-                className="text-sm text-gray-600 transition hover:text-brand-500 dark:text-gray-300"
+                href={`#${secao.id}`}
+                onClick={(evento) => rolarAte(evento, secao.id)}
+                className="text-sm font-semibold text-gray-800 transition hover:text-brand-500 dark:text-white/90"
               >
-                {grupo.titulo}
+                {secao.titulo}
               </a>
-            </li>
+              <ul className="mt-2 flex flex-col gap-2 border-l border-gray-200 pl-3 dark:border-gray-800">
+                {secao.grupos.map((grupo) => (
+                  <li key={grupo.id}>
+                    <a
+                      href={`#${grupo.id}`}
+                      onClick={(evento) => rolarAte(evento, grupo.id)}
+                      className="text-sm text-gray-600 transition hover:text-brand-500 dark:text-gray-300"
+                    >
+                      {grupo.titulo}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
     </nav>
   );
@@ -130,12 +174,15 @@ function Introducao() {
       </h1>
 
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        Todos os endpoints respondem JSON e exigem um token de acesso no
-        cabeçalho <code className="rounded bg-gray-100 px-1 dark:bg-white/10">Authorization</code>.
-        O endereço base é:
+        A API reúne duas fontes de dados: o INPI, do Brasil, e o TMView, com as
+        marcas da União Europeia. Todos os endpoints exigem um token de acesso no
+        cabeçalho <code className="rounded bg-gray-100 px-1 dark:bg-white/10">Authorization</code> e
+        respondem JSON — exceto os de imagens e mídias do TMView, que devolvem o
+        próprio arquivo. O endereço base é:
       </p>
 
-      <Bloco texto={BASE_URL} />
+      {/* Endereço solto não é código: colorido, o tokenizador pintaria pedaços da URL. */}
+      <Bloco texto={BASE_URL} colorir={false} />
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <Passo
@@ -301,9 +348,13 @@ function Resposta({ item, sucesso }: { item: Resposta; sucesso?: boolean }) {
   );
 }
 
-/** Bloco de código com botão de copiar. */
-function Bloco({ texto }: { texto: string }) {
+/** Bloco de código colorido, com botão de copiar. */
+function Bloco({ texto, colorir = true }: { texto: string; colorir?: boolean }) {
   const [copiado, setCopiado] = useState(false);
+  const tokens = useMemo(
+    () => (colorir ? destacar(texto) : [{ tipo: "texto" as const, texto }]),
+    [texto, colorir],
+  );
 
   const copiar = async () => {
     try {
@@ -319,7 +370,17 @@ function Bloco({ texto }: { texto: string }) {
   return (
     <div className="relative">
       <pre className="overflow-x-auto rounded-xl bg-gray-900 p-4 text-theme-xs leading-relaxed text-gray-100">
-        <code>{texto}</code>
+        <code>
+          {tokens.map((token, indice) =>
+            token.tipo === "texto" ? (
+              token.texto
+            ) : (
+              <span key={indice} className={COR_TOKEN[token.tipo]}>
+                {token.texto}
+              </span>
+            ),
+          )}
+        </code>
       </pre>
 
       <button
