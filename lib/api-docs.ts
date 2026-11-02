@@ -56,7 +56,7 @@ export type SecaoDocs = {
 };
 
 /** Endereço base mostrado nos exemplos. */
-export const BASE_URL = "https://api.openipworld.com.br";
+export const BASE_URL = "https://api.openipworld.com";
 
 /** Erros que valem para qualquer rota autenticada — não repetidos em cada uma. */
 export const ERROS_COMUNS: Resposta[] = [
@@ -322,7 +322,7 @@ const GRUPOS_INPI: GrupoEndpoints[] = [
         titulo: "Busca fonética de marcas",
         descricao:
           "Encontra marcas que SOAM parecido com o termo, mesmo escritas de forma diferente. É a busca usada para avaliar colidência: \"Kolla\" encontra \"Cola\", \"Nattura\" encontra \"Natura\".",
-        parametros: [{ nome: "q", descricao: "Termo buscado. Obrigatório.", exemplo: "nattura" }],
+        parametros: [{ nome: "q", descricao: "Termo buscado. Obrigatório.", exemplo: "legitima" }],
         sucesso: {
           status: 200,
           quando: "Busca executada. Resultados vêm ordenados por proximidade sonora.",
@@ -332,10 +332,10 @@ const GRUPOS_INPI: GrupoEndpoints[] = [
     {
       "id": "1000371",
       "score": 97.5,
-      "nome": "NATURA",
+      "nome": "ÁGUA MINERAL NATURAL LEGITIMA",
       "numero_inpi": "820095370",
-      "classe": ["03", "35"],
-      "situacao": "Registro de marca em vigor"
+      "classe": ["32"],
+      "situacao": "Registro de marca extinto"
     }
   ]
 }`,
@@ -352,7 +352,7 @@ const GRUPOS_INPI: GrupoEndpoints[] = [
           ...ERROS_COMUNS,
         ],
         exemplo: `const resposta = await fetch(
-  \`${BASE_URL}/marca/search?q=\${encodeURIComponent("nattura")}\`,
+  \`${BASE_URL}/marca/search?q=\${encodeURIComponent("legitima")}\`,
   { headers: { Authorization: \`Bearer \${accessToken}\` } }
 );
 
@@ -755,6 +755,1185 @@ imagem.src = URL.createObjectURL(blob);
   },
 ];
 
+const GRUPOS_RPI: GrupoEndpoints[] = [
+  {
+    id: "rpi-arquivos",
+    titulo: "Arquivos originais",
+    descricao:
+      "Os arquivos que o INPI publicou em cada edição (PDF, XML, TXT), para baixar como vieram. Vale para todas as oito seções, inclusive as que ainda não têm os dados na API. Seções: comunicados, contratos_tecnologia, desenhos_industriais, indicacoes_geograficas, marcas, patentes, programas_computador, topografias_circuitos.",
+    endpoints: [
+      {
+        id: "rpi-arquivos-lista",
+        metodo: "GET",
+        caminho: "/api/rpi/{secao}/{numero_rpi}/arquivos",
+        titulo: "Listar os arquivos de uma edição",
+        descricao:
+          "Os arquivos da seção na edição, com um `download_url` permanente: pode ser guardado e usado a qualquer momento. `disponivel: false` indica um arquivo que ainda não terminou de ser copiado do INPI; nesse caso `download_url` vem nulo.",
+        sucesso: {
+          status: 200,
+          quando: "A seção existe nessa edição.",
+          corpo: `{
+  "numero_rpi": 2912,
+  "secao": "patentes",
+  "data_publicacao": "2026-10-27",
+  "arquivos": [
+    {
+      "nome_arquivo": "P2912.zip",
+      "formato": "TXT",
+      "rotulo": "TXT + XML",
+      "bytes": 252020,
+      "disponivel": true,
+      "download_url": "${BASE_URL}/api/rpi/patentes/2912/arquivos/P2912.zip"
+    },
+    {
+      "nome_arquivo": "Patentes2912.pdf",
+      "formato": "PDF",
+      "rotulo": "PDF",
+      "bytes": 2307781,
+      "disponivel": true,
+      "download_url": "${BASE_URL}/api/rpi/patentes/2912/arquivos/Patentes2912.pdf"
+    }
+  ]
+}`,
+        },
+        erros: [
+          {
+            status: 404,
+            quando: "Seção desconhecida, ou a edição não tem essa seção.",
+            corpo: `{
+  "status": 404,
+  "message": "RPI 2900 has no \\"patentes\\" section registered."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/patentes/2912/arquivos", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { arquivos } = await resposta.json();`,
+      },
+      {
+        id: "rpi-arquivos-download",
+        metodo: "GET",
+        caminho: "/api/rpi/{secao}/{numero_rpi}/arquivos/{nome_arquivo}",
+        titulo: "Baixar um arquivo",
+        descricao:
+          "É o `download_url` da lista. Responde com um redirecionamento para um link temporário do armazenamento, válido por 5 minutos, de onde o arquivo é baixado. Clientes HTTP comuns seguem o redirecionamento sozinhos. Não guarde o link temporário; guarde o `download_url`.",
+        sucesso: {
+          status: 302,
+          quando: "Arquivo disponível. O cabeçalho `Location` traz o link temporário.",
+          corpo: `Location: https://...?X-Amz-Expires=300&...`,
+        },
+        erros: [
+          {
+            status: 404,
+            quando: "O arquivo não existe nessa seção e edição.",
+            corpo: `{
+  "status": 404,
+  "message": "File \\"P2911.zip\\" not found in RPI 2912 / patentes."
+}`,
+          },
+          {
+            status: 409,
+            quando: "O arquivo ainda está sendo copiado do INPI. Tente de novo mais tarde.",
+            corpo: `{
+  "status": 409,
+  "message": "File is not in storage yet; try again later."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/patentes/2912/arquivos/P2912.zip", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+// fetch segue o redirecionamento: aqui já é o arquivo.
+const arquivo = await resposta.arrayBuffer();`,
+      },
+    ],
+  },
+  {
+    id: "rpi-marcas",
+    titulo: "Marcas (Seção V)",
+    descricao:
+      "Os processos de marca publicados em cada edição da RPI, com os despachos da semana, titulares e classes de Nice. Uma edição sai por semana, às terças.",
+    endpoints: [
+      {
+        id: "rpi-marcas-edicoes",
+        metodo: "GET",
+        caminho: "/api/rpi/marcas/edicoes",
+        titulo: "Listar as edições disponíveis",
+        descricao:
+          "As edições da RPI com Marcas já carregadas, da mais recente para a mais antiga. Use para descobrir o número da última edição antes de consultá-la. O campo `arquivos` aponta para os arquivos originais da edição.",
+        sucesso: {
+          status: 200,
+          quando: "Consulta bem-sucedida.",
+          corpo: `{
+  "results": [
+    { "numero_rpi": 2912, "data_publicacao": "2026-10-27", "processos": 33456, "arquivos": "/api/rpi/marcas/2912/arquivos" }
+  ]
+}`,
+        },
+        erros: ERROS_COMUNS,
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/marcas/edicoes", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { results } = await resposta.json();
+const ultima = results[0]?.numero_rpi;`,
+      },
+      {
+        id: "rpi-marcas-lista",
+        metodo: "GET",
+        caminho: "/api/rpi/marcas",
+        titulo: "Buscar processos publicados",
+        descricao:
+          "Lista paginada com filtros, que podem ser combinados: o processo precisa atender a todos. Os filtros de despacho (despacho, requerente, protocolo) valem para o mesmo despacho. A lista traz as classes só com código e situação; a especificação completa e todos os dados do XML estão no detalhe.",
+        parametros: [
+          { nome: "rpi", descricao: "Número da edição.", exemplo: "2912" },
+          { nome: "processo", descricao: "Número do processo no INPI.", exemplo: "938982168" },
+          { nome: "marca", descricao: "Trecho do nome da marca.", exemplo: "budo" },
+          { nome: "titular", descricao: "Trecho do nome do titular.", exemplo: "aikido" },
+          { nome: "procurador", descricao: "Trecho do nome do procurador do processo.", exemplo: "Continental" },
+          { nome: "classe", descricao: "Classe de Nice, de 1 a 45.", exemplo: "35" },
+          { nome: "despacho", descricao: "Código do despacho. Ex.: IPAS009 (publicação para oposição), IPAS158 (concessão), IPAS423 (notificação de oposição).", exemplo: "IPAS009" },
+          { nome: "requerente", descricao: "Trecho do nome de quem fez a petição que gerou o despacho — numa oposição, o terceiro que se opôs.", exemplo: "staff" },
+          { nome: "protocolo", descricao: "Número da petição que gerou o despacho.", exemplo: "800260235760" },
+          ...PAGINACAO,
+        ],
+        sucesso: {
+          status: 200,
+          quando: "Consulta bem-sucedida. Ordenada da edição mais recente para a mais antiga e, dentro dela, pelo número do processo. Pode vir vazia.",
+          corpo: `{
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "pages": 1,
+  "results": [
+    {
+      "numero_rpi": 2912,
+      "numero_processo": "938982168",
+      "data_deposito": "2025-05-02",
+      "data_concessao": "2026-10-27",
+      "data_vigencia": "2036-10-27",
+      "marca_nome": "BUDO KAIKAN",
+      "apresentacao": "Mista",
+      "natureza": "Produtos e/ou Serviço",
+      "procurador": "Continental Marcas e Patentes S/S Ltda.",
+      "despachos": [
+        { "codigo": "IPAS158", "nome": "Concessão de registro", "texto_complementar": null, "protocolo_numero": null, "requerente_nome": null }
+      ],
+      "titulares": [{ "nome": "ESCOLA DE AIKIDO TAKEMUSSU LTDA", "pais": "BR", "uf": "SP" }],
+      "classes_nice": [{ "codigo": "41", "status": "Deferida" }]
+    }
+  ]
+}`,
+        },
+        erros: [
+          {
+            status: 400,
+            quando: "Parâmetro desconhecido, número inválido, classe fora de 1 a 45 ou `limit` acima de 100.",
+            corpo: `{
+  "status": 400,
+  "message": "Unknown parameter(s): titullar. Accepted: rpi, processo, marca, procurador, despacho, requerente, protocolo, titular, classe, page, limit."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: exemploConsulta("/api/rpi/marcas", "?rpi=2912&despacho=IPAS009&classe=35"),
+      },
+      {
+        id: "rpi-marcas-detalhe",
+        metodo: "GET",
+        caminho: "/api/rpi/marcas/{numero_rpi}/{numero_processo}",
+        titulo: "Detalhar um processo publicado",
+        descricao:
+          "Tudo o que a edição publicou sobre o processo: despachos com a petição que os gerou, titulares, classes de Nice com a especificação completa e, em `dados`, o processo inteiro como veio no XML do INPI — inclusive classificação de Viena, prioridades, sobrestadores e dados de Madri.",
+        sucesso: {
+          status: 200,
+          quando: "Processo encontrado na edição.",
+          corpo: `{
+  "numero_rpi": 2912,
+  "numero_processo": "938982168",
+  "marca_nome": "BUDO KAIKAN",
+  "despachos": [ ... ],
+  "titulares": [ ... ],
+  "classes_nice": [
+    { "codigo": "41", "especificacao": "Academias [educação]; ...", "traducao_especificacao": null, "status": "Deferida" }
+  ],
+  "dados": {
+    "numero": "938982168",
+    "classes-vienna": { "classe-vienna": [{ "codigo": "23.1.1", "edicao": "4" }] },
+    ...
+  }
+}`,
+        },
+        erros: [
+          {
+            status: 404,
+            quando: "O processo não foi publicado nessa edição.",
+            corpo: `{
+  "status": 404,
+  "message": "No trademark process \\"000\\" found in RPI 2912."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/marcas/2912/938982168", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const processo = await resposta.json();`,
+      },
+    ],
+  },
+  {
+    id: "rpi-patentes",
+    titulo: "Patentes (Seção VI)",
+    descricao:
+      "Os despachos de patente publicados em cada edição da RPI, com o processo como o INPI o publicou: titulares, inventores, classificações IPC e nacional, prioridades e dados de PCT. Aqui cada resultado é um despacho, porque o mesmo processo pode sair em mais de um despacho na mesma edição.",
+    endpoints: [
+      {
+        id: "rpi-patentes-edicoes",
+        metodo: "GET",
+        caminho: "/api/rpi/patentes/edicoes",
+        titulo: "Listar as edições disponíveis",
+        descricao:
+          "As edições da RPI com Patentes já carregadas, da mais recente para a mais antiga, com o número de despachos de cada uma. O campo `arquivos` aponta para os arquivos originais da edição.",
+        sucesso: {
+          status: 200,
+          quando: "Consulta bem-sucedida.",
+          corpo: `{
+  "results": [
+    { "numero_rpi": 2912, "data_publicacao": "2026-10-27", "despachos": 1927, "arquivos": "/api/rpi/patentes/2912/arquivos" }
+  ]
+}`,
+        },
+        erros: ERROS_COMUNS,
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/patentes/edicoes", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { results } = await resposta.json();
+const ultima = results[0]?.numero_rpi;`,
+      },
+      {
+        id: "rpi-patentes-lista",
+        metodo: "GET",
+        caminho: "/api/rpi/patentes",
+        titulo: "Buscar despachos publicados",
+        descricao:
+          "Lista paginada de despachos com filtros, que podem ser combinados: o despacho precisa atender a todos. O número do processo vale em qualquer formato, porque só os dígitos contam. Todos os dados do XML estão no detalhe.",
+        parametros: [
+          { nome: "rpi", descricao: "Número da edição.", exemplo: "2912" },
+          { nome: "processo", descricao: "Número do processo, em qualquer formato: BR 10 2015 012489-9, BR102015012489-9 ou 1020150124899.", exemplo: "BR102015012489-9" },
+          { nome: "despacho", descricao: "Código do despacho. Ex.: 3.1 (publicação do pedido), 6.1 (exigência técnica), 9.1 (deferimento), 16.1 (concessão).", exemplo: "16.1" },
+          { nome: "titular", descricao: "Trecho do nome do titular ou depositante.", exemplo: "unicamp" },
+          { nome: "inventor", descricao: "Trecho do nome do inventor.", exemplo: "silva" },
+          { nome: "ipc", descricao: "Início da classificação IPC: seção, classe, subclasse ou grupo. Com ou sem espaço.", exemplo: "A61K" },
+          { nome: "kindcode", descricao: "Tipo do documento. Ex.: A2 (pedido de invenção), B1 (patente de invenção), U2 (pedido de modelo de utilidade), Y1 (patente de modelo de utilidade).", exemplo: "B1" },
+          ...PAGINACAO,
+        ],
+        sucesso: {
+          status: 200,
+          quando: "Consulta bem-sucedida. Ordenada da edição mais recente para a mais antiga e, dentro dela, na ordem da revista. Pode vir vazia.",
+          corpo: `{
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "pages": 1,
+  "results": [
+    {
+      "numero_rpi": 2912,
+      "codigo": "16.1",
+      "titulo": "Concessão de Patente ou Certificado de Adição de Invenção",
+      "comentario": "Prazo de Validade: 20 (vinte) anos contados a partir de 28/05/2015, ...",
+      "numero_processo": "BR 10 2015 012489-9",
+      "numero_inid": "11",
+      "kindcode": "B1",
+      "titulo_patente": "LUMINÁRIA RETRÁTIL PARA ILUMINAÇÃO PÚBLICA",
+      "data_deposito": "2015-05-28",
+      "data_concessao": null,
+      "data_fase_nacional": null,
+      "data_publicacao_nacional": "2017-01-17",
+      "pct_numero": null,
+      "pct_data": null,
+      "wo_numero": null,
+      "wo_data": null,
+      "divisao_numero": null,
+      "divisao_data": null,
+      "pedido_principal_numero": null,
+      "pedido_principal_data": null,
+      "titulares": [{ "nome": "PROJELUZ LUMINÁRIAS E ARTEFATOS DE METAIS LTDA.", "pais": "BR", "uf": "PR", "inid": "73" }],
+      "inventores": [{ "nome": "NADINAEL JOSÉ DA SILVA" }],
+      "classificacoes": [
+        { "tipo": "internacional", "codigo": "F21V 21/28", "ano": "2006.01" },
+        { "tipo": "internacional", "codigo": "F21V 21/34", "ano": "2006.01" }
+      ],
+      "prioridades": []
+    }
+  ]
+}`,
+        },
+        erros: [
+          {
+            status: 400,
+            quando: "Parâmetro desconhecido, número inválido, IPC que não começa por uma seção de A a H ou `limit` acima de 100.",
+            corpo: `{
+  "status": 400,
+  "message": "Unknown parameter(s): marca. Accepted: rpi, processo, despacho, titular, inventor, ipc, kindcode, page, limit."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: exemploConsulta("/api/rpi/patentes", "?rpi=2912&despacho=16.1&ipc=A61K"),
+      },
+      {
+        id: "rpi-patentes-detalhe",
+        metodo: "GET",
+        caminho: "/api/rpi/patentes/{numero_rpi}/{numero_processo}",
+        titulo: "Detalhar um processo publicado",
+        descricao:
+          "Todos os despachos do processo na edição, na ordem da revista. Quase sempre é um só; quando são mais, cada despacho traz o processo como o INPI o publicou naquele despacho (por exemplo, como pedido, com INID 21, num deles e como patente concedida, com INID 11, no outro). Cada despacho traz também, em `dados`, o despacho inteiro como veio no XML do INPI. O número do processo vale em qualquer formato.",
+        sucesso: {
+          status: 200,
+          quando: "Processo encontrado na edição.",
+          corpo: `{
+  "numero_rpi": 2912,
+  "numero_processo": "BR 10 2015 012489-9",
+  "despachos": [
+    {
+      "codigo": "16.1",
+      "titulo": "Concessão de Patente ou Certificado de Adição de Invenção",
+      "numero_inid": "11",
+      "kindcode": "B1",
+      "titulares": [ ... ],
+      "inventores": [ ... ],
+      "classificacoes": [ ... ],
+      "prioridades": [],
+      "dados": {
+        "codigo": "16.1",
+        "processo-patente": {
+          "numero": { "inid": "11", "kindcode": "B1", "#text": "BR 10 2015 012489-9" },
+          ...
+        }
+      }
+    }
+  ]
+}`,
+        },
+        erros: [
+          {
+            status: 404,
+            quando: "O processo não foi publicado nessa edição.",
+            corpo: `{
+  "status": 404,
+  "message": "No patent process \\"1020150124899\\" found in RPI 2911."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/patentes/2912/1020150124899", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { despachos } = await resposta.json();`,
+      },
+    ],
+  },
+  {
+    id: "rpi-programas",
+    titulo: "Programas de computador (Seção VII)",
+    descricao:
+      "Os despachos de registro de programa de computador publicados em cada edição da RPI, com titulares, criadores, linguagens, campos de aplicação e tipos de programa. Como em Patentes, cada resultado é um despacho.",
+    endpoints: [
+      {
+        id: "rpi-programas-edicoes",
+        metodo: "GET",
+        caminho: "/api/rpi/programas_computador/edicoes",
+        titulo: "Listar as edições disponíveis",
+        descricao:
+          "As edições da RPI com Programas de computador já carregadas, da mais recente para a mais antiga, com o número de despachos de cada uma. O campo `arquivos` aponta para os arquivos originais da edição.",
+        sucesso: {
+          status: 200,
+          quando: "Consulta bem-sucedida.",
+          corpo: `{
+  "results": [
+    { "numero_rpi": 2912, "data_publicacao": "2026-10-27", "despachos": 334, "arquivos": "/api/rpi/programas_computador/2912/arquivos" }
+  ]
+}`,
+        },
+        erros: ERROS_COMUNS,
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/programas_computador/edicoes", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { results } = await resposta.json();
+const ultima = results[0]?.numero_rpi;`,
+      },
+      {
+        id: "rpi-programas-lista",
+        metodo: "GET",
+        caminho: "/api/rpi/programas_computador",
+        titulo: "Buscar despachos publicados",
+        descricao:
+          "Lista paginada de despachos com filtros, que podem ser combinados: o despacho precisa atender a todos. O número do processo vale em qualquer formato, porque só os dígitos contam. Todos os dados do XML estão no detalhe.",
+        parametros: [
+          { nome: "rpi", descricao: "Número da edição.", exemplo: "2912" },
+          { nome: "processo", descricao: "Número do processo, em qualquer formato: BR 51 2025 006737-2, BR512025006737-2 ou 5120250067372.", exemplo: "BR512025006737-2" },
+          { nome: "despacho", descricao: "Código do despacho. Ex.: 730 (expedição do certificado de registro), 734 (transferência de titularidade), 733 (alteração de endereço).", exemplo: "730" },
+          { nome: "titular", descricao: "Trecho do nome do titular.", exemplo: "universidade" },
+          { nome: "criador", descricao: "Trecho do nome do criador (autor do programa).", exemplo: "silva" },
+          { nome: "linguagem", descricao: "Linguagem de programação, pelo nome exato que o INPI publica: JAVA não traz JAVA SCRIPT.", exemplo: "PYTHON" },
+          { nome: "campo_aplicacao", descricao: "Início do código do campo de aplicação: a área (SD) ou o código completo (SD-06).", exemplo: "SD" },
+          { nome: "tipo_programa", descricao: "Início do código do tipo de programa: a categoria (IA) ou o código completo (IA-02).", exemplo: "IA" },
+          ...PAGINACAO,
+        ],
+        sucesso: {
+          status: 200,
+          quando: "Consulta bem-sucedida. Ordenada da edição mais recente para a mais antiga e, dentro dela, na ordem da revista. Pode vir vazia.",
+          corpo: `{
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "pages": 1,
+  "results": [
+    {
+      "numero_rpi": 2912,
+      "codigo": "730",
+      "titulo": "Expedição do Certificado de Registro",
+      "comentario": null,
+      "numero_processo": "BR 51 2025 006737-2",
+      "titulo_programa": "FERRAMENTA PARA PREDIÇÃO DE IDADE ÓSSEA EM IMAGENS DE RADIOGRAFIA CARPAL ...",
+      "data_criacao": "2025-01-01",
+      "titulares": [{ "nome": "HOSPITAL DE CLÍNICAS DE PORTO ALEGRE (HCPA)" }],
+      "criadores": [{ "nome": "ALEXANDRE BACELAR" }, { "nome": "CARLA DINIZ LOPES BECKER" }],
+      "linguagens": [{ "nome": "OUTROS" }, { "nome": "PYTHON" }],
+      "classificacoes": [
+        { "tipo": "campo_aplicacao", "codigo": "SD-06" },
+        { "tipo": "tipo_programa", "codigo": "IA-02" }
+      ]
+    }
+  ]
+}`,
+        },
+        erros: [
+          {
+            status: 400,
+            quando: "Parâmetro desconhecido, número inválido ou `limit` acima de 100.",
+            corpo: `{
+  "status": 400,
+  "message": "Unknown parameter(s): ipc. Accepted: rpi, processo, despacho, titular, criador, linguagem, campo_aplicacao, tipo_programa, page, limit."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: exemploConsulta("/api/rpi/programas_computador", "?rpi=2912&linguagem=PYTHON&tipo_programa=IA"),
+      },
+      {
+        id: "rpi-programas-detalhe",
+        metodo: "GET",
+        caminho: "/api/rpi/programas_computador/{numero_rpi}/{numero_processo}",
+        titulo: "Detalhar um processo publicado",
+        descricao:
+          "Todos os despachos do processo na edição, na ordem da revista, cada um com `dados`: o despacho inteiro como veio no XML do INPI. O número do processo vale em qualquer formato.",
+        sucesso: {
+          status: 200,
+          quando: "Processo encontrado na edição.",
+          corpo: `{
+  "numero_rpi": 2912,
+  "numero_processo": "BR 51 2025 006737-2",
+  "despachos": [
+    {
+      "codigo": "730",
+      "titulo": "Expedição do Certificado de Registro",
+      "titulo_programa": "FERRAMENTA PARA PREDIÇÃO DE IDADE ÓSSEA ...",
+      "data_criacao": "2025-01-01",
+      "titulares": [ ... ],
+      "criadores": [ ... ],
+      "linguagens": [ ... ],
+      "classificacoes": [ ... ],
+      "dados": {
+        "codigo": "730",
+        "processo-programa": {
+          "numero": { "inid": "Np", "#text": "BR 51 2025 006737-2" },
+          ...
+        }
+      }
+    }
+  ]
+}`,
+        },
+        erros: [
+          {
+            status: 404,
+            quando: "O processo não foi publicado nessa edição.",
+            corpo: `{
+  "status": 404,
+  "message": "No software process \\"5120250067372\\" found in RPI 2911."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/programas_computador/2912/5120250067372", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { despachos } = await resposta.json();`,
+      },
+    ],
+  },
+  {
+    id: "rpi-contratos",
+    titulo: "Contratos de tecnologia (Seção II)",
+    descricao:
+      "Os despachos de averbação e registro de contratos de tecnologia publicados em cada edição da RPI: as partes (cedente e cessionária), os certificados expedidos, com objeto, valor e prazos, e as petições notificadas. Como em Patentes, cada resultado é um despacho.",
+    endpoints: [
+      {
+        id: "rpi-contratos-edicoes",
+        metodo: "GET",
+        caminho: "/api/rpi/contratos_tecnologia/edicoes",
+        titulo: "Listar as edições disponíveis",
+        descricao:
+          "As edições da RPI com Contratos de tecnologia já carregados, da mais recente para a mais antiga, com o número de despachos de cada uma. O campo `arquivos` aponta para os arquivos originais da edição.",
+        sucesso: {
+          status: 200,
+          quando: "Consulta bem-sucedida.",
+          corpo: `{
+  "results": [
+    { "numero_rpi": 2912, "data_publicacao": "2026-10-27", "despachos": 42, "arquivos": "/api/rpi/contratos_tecnologia/2912/arquivos" }
+  ]
+}`,
+        },
+        erros: ERROS_COMUNS,
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/contratos_tecnologia/edicoes", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { results } = await resposta.json();
+const ultima = results[0]?.numero_rpi;`,
+      },
+      {
+        id: "rpi-contratos-lista",
+        metodo: "GET",
+        caminho: "/api/rpi/contratos_tecnologia",
+        titulo: "Buscar despachos publicados",
+        descricao:
+          "Lista paginada de despachos com filtros, que podem ser combinados: o despacho precisa atender a todos. Os filtros de certificado (categoria, certificado) valem para o mesmo certificado, e os de petição (peticao, requerente), para a mesma petição. O número do processo vale em qualquer formato, porque só os dígitos contam. Todos os dados do XML estão no detalhe.",
+        parametros: [
+          { nome: "rpi", descricao: "Número da edição.", exemplo: "2912" },
+          { nome: "processo", descricao: "Número do processo, em qualquer formato: BR 70 2014 000160-6, BR702014000160-6 ou 7020140001606. Processos antigos têm só dígitos (ex.: 120068).", exemplo: "BR702014000160-6" },
+          { nome: "despacho", descricao: "Código do despacho. Ex.: 145 (exigência), 150 (petição notificada), 350 (certificado expedido).", exemplo: "350" },
+          { nome: "cedente", descricao: "Trecho do nome do cedente, quem fornece a tecnologia.", exemplo: "honda" },
+          { nome: "cessionaria", descricao: "Trecho do nome da cessionária, quem recebe a tecnologia.", exemplo: "honda" },
+          { nome: "categoria", descricao: "Trecho da categoria do certificado. Ex.: MARCA (uso de marca), PATENTE (exploração de patente).", exemplo: "patente" },
+          { nome: "certificado", descricao: "Número do certificado de averbação.", exemplo: "702014000160/13" },
+          { nome: "peticao", descricao: "Número da petição notificada.", exemplo: "880260000849" },
+          { nome: "requerente", descricao: "Trecho do nome de quem fez a petição.", exemplo: "vallourec" },
+          ...PAGINACAO,
+        ],
+        sucesso: {
+          status: 200,
+          quando: "Consulta bem-sucedida. Ordenada da edição mais recente para a mais antiga e, dentro dela, na ordem da revista. Pode vir vazia.",
+          corpo: `{
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "pages": 1,
+  "results": [
+    {
+      "numero_rpi": 2912,
+      "codigo": "350",
+      "titulo": "Certificado expedido",
+      "comentario": null,
+      "numero_processo": "BR 70 2014 000160-6",
+      "data_protocolo": "2026-10-05",
+      "partes": [
+        { "tipo": "cedente", "nome": "VALLOUREC OIL & GAS FRANCE", "pais": "FRANÇA", "setor": null },
+        { "tipo": "cessionaria", "nome": "ONESUBSEA DO BRASIL SERVIÇOS SUBMARINOS LTDA.", "pais": "BRASIL", "setor": "Fabricação de máquinas e equipamentos para a prospecção e extração de petróleo" }
+      ],
+      "certificados": [
+        {
+          "numero": "702014000160/13",
+          "natureza_documento": "Contrato de 05/10/2012.",
+          "categorias": "USO DE MARCA;EXPLORAÇÃO DE PATENTE",
+          "texto_objeto": "UM- Licença/sublicença não exclusiva para os Registros de Marca ...",
+          "moeda": "EURO",
+          "valor": "- UM: \\"NIHIL\\". - EP: EUR 18,00 até EUR 130,00 por unidade dos produtos, ...",
+          "prazo_contrato": "De 05/10/2012 até 05/10/2027.",
+          "prazo_vigencia_pi": "De 18/09/2014 até 05/10/2027, observando-se a vigência dos direitos ...",
+          "observacao": "1- A validade deste Certificado de Averbação está condicionada ..."
+        }
+      ],
+      "peticoes": []
+    }
+  ]
+}`,
+        },
+        erros: [
+          {
+            status: 400,
+            quando: "Parâmetro desconhecido, número inválido ou `limit` acima de 100.",
+            corpo: `{
+  "status": 400,
+  "message": "Unknown parameter(s): titular. Accepted: rpi, processo, despacho, cedente, cessionaria, categoria, certificado, peticao, requerente, page, limit."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: exemploConsulta("/api/rpi/contratos_tecnologia", "?rpi=2912&despacho=350&categoria=patente"),
+      },
+      {
+        id: "rpi-contratos-detalhe",
+        metodo: "GET",
+        caminho: "/api/rpi/contratos_tecnologia/{numero_rpi}/{numero_processo}",
+        titulo: "Detalhar um processo publicado",
+        descricao:
+          "Todos os despachos do processo na edição, na ordem da revista, cada um com `dados`: o despacho inteiro como veio no XML do INPI. O número do processo vale em qualquer formato.",
+        sucesso: {
+          status: 200,
+          quando: "Processo encontrado na edição.",
+          corpo: `{
+  "numero_rpi": 2912,
+  "numero_processo": "BR 70 2014 000318-8",
+  "despachos": [
+    {
+      "codigo": "150",
+      "titulo": "Notificado o Requerimento de Averbação/Registro ou Petição",
+      "data_protocolo": null,
+      "partes": [],
+      "certificados": [],
+      "peticoes": [
+        { "numero": "880260000849", "data_protocolo": "2026-10-19", "requerente": "VALLOUREC SOLUÇÕES TUBULARES DO BRASIL S/A" }
+      ],
+      "dados": {
+        "codigo": "150",
+        "processo-contrato": {
+          "numero": { "inid": "Np", "#text": "BR 70 2014 000318-8" },
+          ...
+        }
+      }
+    }
+  ]
+}`,
+        },
+        erros: [
+          {
+            status: 404,
+            quando: "O processo não foi publicado nessa edição.",
+            corpo: `{
+  "status": 404,
+  "message": "No technology contract process \\"7020140003188\\" found in RPI 2911."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/contratos_tecnologia/2912/7020140003188", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { despachos } = await resposta.json();`,
+      },
+    ],
+  },
+  {
+    id: "rpi-indicacoes",
+    titulo: "Indicações geográficas (Seção IV)",
+    descricao:
+      "Os despachos de Indicação Geográfica publicados em cada edição da RPI. O INPI publica esta seção só em PDF: os campos saem da ficha que abre cada despacho, conferidos contra o índice da revista e o rodapé da ficha, e o texto inteiro do despacho (ficha e anexos, com OCR nas páginas escaneadas) fica disponível para busca. Cada despacho informa como foi lido (`extraido_por`) e a situação da leitura (`status_extracao`): ok (passou em todas as conferências), alerta (alguma conferência não fechou; os motivos vêm em `alertas`) ou conferido (revisado por uma pessoa, com `conferido_em`).",
+    endpoints: [
+      {
+        id: "rpi-indicacoes-edicoes",
+        metodo: "GET",
+        caminho: "/api/rpi/indicacoes_geograficas/edicoes",
+        titulo: "Listar as edições disponíveis",
+        descricao:
+          "As edições da RPI com Indicações geográficas já carregadas, da mais recente para a mais antiga, com o número de despachos de cada uma. O campo `arquivos` aponta para o PDF original da edição.",
+        sucesso: {
+          status: 200,
+          quando: "Consulta bem-sucedida.",
+          corpo: `{
+  "results": [
+    { "numero_rpi": 2912, "data_publicacao": "2026-10-27", "despachos": 4, "arquivos": "/api/rpi/indicacoes_geograficas/2912/arquivos" }
+  ]
+}`,
+        },
+        erros: ERROS_COMUNS,
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/indicacoes_geograficas/edicoes", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { results } = await resposta.json();
+const ultima = results[0]?.numero_rpi;`,
+      },
+      {
+        id: "rpi-indicacoes-lista",
+        metodo: "GET",
+        caminho: "/api/rpi/indicacoes_geograficas",
+        titulo: "Buscar despachos publicados",
+        descricao:
+          "Lista paginada de despachos com filtros, que podem ser combinados: o despacho precisa atender a todos. O número do pedido vale em qualquer formato, porque só os dígitos contam. O texto completo de cada despacho está no detalhe.",
+        parametros: [
+          { nome: "rpi", descricao: "Número da edição.", exemplo: "2912" },
+          { nome: "processo", descricao: "Número do pedido, em qualquer formato.", exemplo: "BR402026000003-1" },
+          { nome: "despacho", descricao: "Código do despacho. Ex.: 310 (exigência em pedido de registro), 395 (concessão de registro).", exemplo: "395" },
+          { nome: "indicacao", descricao: "Trecho do nome da indicação geográfica.", exemplo: "friburgo" },
+          { nome: "especie", descricao: "Trecho da espécie: Indicação de Procedência ou Denominação de Origem.", exemplo: "origem" },
+          { nome: "requerente", descricao: "Trecho do nome do requerente.", exemplo: "sindicato" },
+          { nome: "texto", descricao: "Trecho procurado no texto inteiro do despacho, anexos incluídos (relatórios de exame, cadernos de especificações).", exemplo: "jabuticaba" },
+          { nome: "status", descricao: "Situação da leitura do PDF: ok (passou em todas as conferências), alerta (alguma conferência não fechou) ou conferido (revisado por uma pessoa).", exemplo: "alerta" },
+          ...PAGINACAO,
+        ],
+        sucesso: {
+          status: 200,
+          quando: "Consulta bem-sucedida. Ordenada da edição mais recente para a mais antiga e, dentro dela, na ordem do PDF. Pode vir vazia.",
+          corpo: `{
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "pages": 1,
+  "results": [
+    {
+      "numero_rpi": 2912,
+      "codigo": "395",
+      "descricao_codigo": "Concessão de registro",
+      "numero_processo": "BR402026000003-1",
+      "indicacao_geografica": "Nova Friburgo",
+      "especie": "Indicação de Procedência",
+      "natureza": "Produto",
+      "produto": "Lingerie",
+      "pais": "Brasil",
+      "delimitacao": "Compreende os municípios de Nova Friburgo, Cachoeiras de Macacu, ...",
+      "data_deposito": "2026-03-05",
+      "requerente": "Sindicato das Indústrias do Vestuário de Nova Friburgo – SINDVEST",
+      "procurador": "Marcos Fabricio Welge Gonçalves",
+      "despacho": "Comunicação de concessão de registro de reconhecimento de Indicação Geográfica. ...",
+      "pagina_inicio": 27,
+      "pagina_fim": 50,
+      "extraido_por": "ocr+claude-haiku-5-5",
+      "status_extracao": "ok",
+      "alertas": null,
+      "conferido_por": null,
+      "conferido_em": null
+    }
+  ]
+}`,
+        },
+        erros: [
+          {
+            status: 400,
+            quando: "Parâmetro desconhecido, número inválido, status diferente de ok/alerta/conferido ou `limit` acima de 100.",
+            corpo: `{
+  "status": 400,
+  "message": "The \\"status\\" parameter accepts \\"ok\\", \\"alerta\\" or \\"conferido\\"."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: exemploConsulta("/api/rpi/indicacoes_geograficas", "?rpi=2912&especie=origem"),
+      },
+      {
+        id: "rpi-indicacoes-detalhe",
+        metodo: "GET",
+        caminho: "/api/rpi/indicacoes_geograficas/{numero_rpi}/{numero_processo}",
+        titulo: "Detalhar um pedido publicado",
+        descricao:
+          "Todos os despachos do pedido na edição, na ordem do PDF, com os mesmos campos da lista e mais `texto_completo`: o texto do despacho inteiro, ficha e anexos. As páginas escaneadas entram pelo OCR. O número do pedido vale em qualquer formato.",
+        sucesso: {
+          status: 200,
+          quando: "Pedido encontrado na edição.",
+          corpo: `{
+  "numero_rpi": 2912,
+  "numero_processo": "BR402026000003-1",
+  "despachos": [
+    {
+      "codigo": "395",
+      "descricao_codigo": "Concessão de registro",
+      "indicacao_geografica": "Nova Friburgo",
+      ...
+      "pagina_inicio": 27,
+      "pagina_fim": 50,
+      "texto_completo": "INDICAÇÕES GEOGRÁFICAS — RPI 2912 de 27 de outubro de 2026 ...",
+      "extraido_por": "ocr+claude-haiku-5-5",
+      "status_extracao": "ok",
+      "alertas": null
+    }
+  ]
+}`,
+        },
+        erros: [
+          {
+            status: 404,
+            quando: "O pedido não foi publicado nessa edição.",
+            corpo: `{
+  "status": 404,
+  "message": "No geographical indication application \\"BR402026000003-1\\" found in RPI 2911."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/indicacoes_geograficas/2912/BR402026000003-1", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { despachos } = await resposta.json();`,
+      },
+    ],
+  },
+  ...gruposLista({
+    id: "desenhos",
+    secao: "desenhos_industriais",
+    titulo: "Desenhos industriais (Seção III)",
+    descricao:
+      "Os despachos de desenho industrial publicados em cada edição da RPI: depósitos, exigências, concessões (com título, autor e classificação de Locarno), extinções, nulidades, petições e decisões judiciais. O INPI publica esta seção só em PDF, como uma lista: cada despacho tem à esquerda o identificador — o processo (BR302025000451-9), o registro antigo (DI6101520-2) ou a petição (870250102286, com a data) — e à direita o título e os campos. Cada resultado é um despacho.",
+    despachos: 765,
+    filtroExtra: { nome: "classificacao", descricao: "Início da classificação de Locarno: a classe (09) ou a subclasse (09-01).", exemplo: "09-01" },
+    exemploLista: `{
+      "numero_rpi": 2912,
+      "identificador": "BR302025000453-5",
+      "tipo_identificador": "processo",
+      "complemento": "0/ 0000000453",
+      "data_peticao": null,
+      "subsecao": "Registro de desenho industrial concedido",
+      "codigo": "158",
+      "titulo": "Concessão de registro",
+      "numero_processo": "BR302025000453-5",
+      "titular": "NATURA COSMÉTICOS S.A. [BR/SP]",
+      "autor": "DENIS CARLOS DO NASCIMENTO[BR]",
+      "titulo_registro": "Frasco",
+      "data_deposito": "2025-01-31",
+      "classificacao": "09-01",
+      "procurador": "Dannemann, Siemsen, Bigler & Ipanema Moreira",
+      "requerente": null,
+      "titular_registro": null,
+      "procurador_titular": null,
+      "peticao_tipo": null,
+      "peticao_afetada": null,
+      "prioridade": null,
+      "detalhes": "De acordo com o item 3.5.2 do Manual de Desenhos Industriais, ...",
+      "pagina": 38,
+      "extraido_por": "regras",
+      "status_extracao": "ok",
+      "alertas": null,
+      "conferido_por": null,
+      "conferido_em": null
+    }`,
+    processoExemplo: "BR302025000453-5",
+    despachoExemplo: "158",
+    erro404: "No industrial design process \\\"BR302025000453-5\\\" found in RPI 2911.",
+  }),
+  ...gruposLista({
+    id: "topografias",
+    secao: "topografias_circuitos",
+    titulo: "Topografias de circuitos integrados (Seção VIII)",
+    descricao:
+      "Os despachos de topografia de circuito integrado publicados em cada edição da RPI. O INPI publica esta seção só em PDF e, na maioria das semanas, sem despachos (\"Sem Publicação\"): a edição aparece em /edicoes com zero despachos. Os campos comuns vêm em colunas; os demais, em `campos_impressos` no detalhe.",
+    despachos: 0,
+    exemploLista: `{
+      "numero_rpi": 2912,
+      "identificador": "BR...",
+      "tipo_identificador": "processo",
+      "codigo": "...",
+      "titulo": "...",
+      "numero_processo": "BR...",
+      "titular": "...",
+      "procurador": "...",
+      "data_deposito": "AAAA-MM-DD",
+      "detalhes": null,
+      "pagina": 4,
+      "extraido_por": "regras",
+      "status_extracao": "ok",
+      "alertas": null,
+      "conferido_por": null,
+      "conferido_em": null
+    }`,
+    processoExemplo: "BR...",
+    despachoExemplo: "...",
+    erro404: "No integrated circuit topography process \\\"...\\\" found in RPI 2911.",
+  }),
+  {
+    id: "rpi-comunicados",
+    titulo: "Comunicados (Seção I)",
+    descricao:
+      "Os comunicados das diretorias do INPI publicados em cada edição da RPI: avisos, mudanças de procedimento e listas (por exemplo, restituições de retribuição deferidas e indeferidas). O INPI publica esta seção só em PDF. O texto vem inteiro; as tabelas são lidas e conferidas contra os números da página, e cada linha delas pode ser buscada pelo número do processo. Um comunicado não tem processo: no detalhe, ele é identificado pela posição na edição.",
+    endpoints: [
+      {
+        id: "rpi-comunicados-edicoes",
+        metodo: "GET",
+        caminho: "/api/rpi/comunicados/edicoes",
+        titulo: "Listar as edições disponíveis",
+        descricao:
+          "As edições da RPI com Comunicados já carregados, da mais recente para a mais antiga, com o número de comunicados de cada uma. O campo `arquivos` aponta para o PDF original da edição.",
+        sucesso: {
+          status: 200,
+          quando: "Consulta bem-sucedida.",
+          corpo: `{
+  "results": [
+    { "numero_rpi": 2912, "data_publicacao": "2026-10-27", "comunicados": 3, "arquivos": "/api/rpi/comunicados/2912/arquivos" }
+  ]
+}`,
+        },
+        erros: ERROS_COMUNS,
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/comunicados/edicoes", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { results } = await resposta.json();`,
+      },
+      {
+        id: "rpi-comunicados-lista",
+        metodo: "GET",
+        caminho: "/api/rpi/comunicados",
+        titulo: "Buscar comunicados",
+        descricao:
+          "Lista paginada de comunicados com filtros, que podem ser combinados. A lista traz o cabeçalho e quantas linhas de tabela o comunicado tem; o texto e as tabelas estão no detalhe.",
+        parametros: [
+          { nome: "rpi", descricao: "Número da edição.", exemplo: "2912" },
+          { nome: "titulo", descricao: "Trecho do título.", exemplo: "restituição" },
+          { nome: "orgao", descricao: "Trecho do órgão que publica.", exemplo: "administração" },
+          { nome: "texto", descricao: "Trecho procurado no texto inteiro do comunicado.", exemplo: "cachaça" },
+          { nome: "processo", descricao: "Número de processo numa tabela do comunicado (processo administrativo ou de PI).", exemplo: "52402.025041/2026" },
+          { nome: "status", descricao: "Situação da leitura do PDF: ok, alerta ou conferido.", exemplo: "ok" },
+          ...PAGINACAO,
+        ],
+        sucesso: {
+          status: 200,
+          quando: "Consulta bem-sucedida. Ordenada da edição mais recente para a mais antiga e, dentro dela, na ordem do PDF. Pode vir vazia.",
+          corpo: `{
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "pages": 1,
+  "results": [
+    {
+      "numero_rpi": 2912,
+      "sequencia": 3,
+      "orgao": "DIRETORIA DE ADMINISTRAÇÃO / COORDENAÇÃO-GERAL DE ORÇAMENTO, CONTABILIDADE E FINANÇAS / DIVISÃO DE ANÁLISE FINANCEIRA",
+      "titulo": "Processos de Restituição de Retribuição Indeferidos",
+      "pagina_inicio": 5,
+      "pagina_fim": 8,
+      "extraido_por": "claude-haiku-5-5",
+      "status_extracao": "ok",
+      "alertas": null,
+      "conferido_por": null,
+      "conferido_em": null,
+      "linhas_de_tabela": 96
+    }
+  ]
+}`,
+        },
+        erros: [
+          {
+            status: 400,
+            quando: "Parâmetro desconhecido, número inválido, status diferente de ok/alerta/conferido ou `limit` acima de 100.",
+            corpo: `{
+  "status": 400,
+  "message": "Unknown parameter(s): despacho. Accepted: rpi, titulo, orgao, texto, processo, status, page, limit."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: exemploConsulta("/api/rpi/comunicados", "?rpi=2912&processo=52402.025041/2026"),
+      },
+      {
+        id: "rpi-comunicados-detalhe",
+        metodo: "GET",
+        caminho: "/api/rpi/comunicados/{numero_rpi}/{sequencia}",
+        titulo: "Detalhar um comunicado",
+        descricao:
+          "O comunicado inteiro: cabeçalho, texto e tabelas. `sequencia` é a posição do comunicado na edição (1, 2, 3...), que vem na lista.",
+        sucesso: {
+          status: 200,
+          quando: "Comunicado encontrado.",
+          corpo: `{
+  "numero_rpi": 2912,
+  "sequencia": 2,
+  "orgao": "DIRETORIA DE ADMINISTRAÇÃO / COORDENAÇÃO-GERAL DE ORÇAMENTO, CONTABILIDADE E FINANÇAS / DIVISÃO DE ANÁLISE FINANCEIRA",
+  "titulo": "Segue abaixo a lista dos processos de restituição de retribuição deferidos.",
+  "texto": "DIRETORIA DE ADMINISTRAÇÃO ...",
+  "tabelas": [
+    {
+      "titulo": "Processos de restituição de retribuição deferidos",
+      "colunas": ["Nº do processo", "Nº da GRU"],
+      "linhas": [["52402.025041/2026", "29409172355017020"]]
+    }
+  ],
+  "pagina_inicio": 4,
+  "pagina_fim": 4,
+  "extraido_por": "claude-haiku-5-5",
+  "status_extracao": "ok",
+  "alertas": null,
+  "conferido_por": null,
+  "conferido_em": null,
+  "correcoes": null
+}`,
+        },
+        erros: [
+          {
+            status: 404,
+            quando: "Não há comunicado nessa posição da edição.",
+            corpo: `{
+  "status": 404,
+  "message": "No notice 9 in RPI 2912."
+}`,
+          },
+          ...ERROS_COMUNS,
+        ],
+        exemplo: `const resposta = await fetch("${BASE_URL}/api/rpi/comunicados/2912/2", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { tabelas } = await resposta.json();`,
+      },
+    ],
+  },
+];
+
+/**
+ * Os três endpoints das seções em lista (Desenhos industriais e Topografias),
+ * que têm o mesmo formato e mudam só nos exemplos e num filtro.
+ */
+function gruposLista(opcoes: {
+  id: string;
+  secao: string;
+  titulo: string;
+  descricao: string;
+  despachos: number;
+  filtroExtra?: Parametro;
+  exemploLista: string;
+  processoExemplo: string;
+  despachoExemplo: string;
+  erro404: string;
+}): GrupoEndpoints[] {
+  const base = `/api/rpi/${opcoes.secao}`;
+  const filtros = ["rpi", "processo", "despacho", "titular", "procurador", "requerente", "subsecao", "texto", "status", ...(opcoes.filtroExtra ? [opcoes.filtroExtra.nome] : [])];
+
+  return [
+    {
+      id: `rpi-${opcoes.id}`,
+      titulo: opcoes.titulo,
+      descricao: opcoes.descricao,
+      endpoints: [
+        {
+          id: `rpi-${opcoes.id}-edicoes`,
+          metodo: "GET",
+          caminho: `${base}/edicoes`,
+          titulo: "Listar as edições disponíveis",
+          descricao:
+            "As edições da RPI com esta seção já carregada, da mais recente para a mais antiga, com o número de despachos de cada uma (zero quando a seção saiu sem publicação). O campo `arquivos` aponta para o PDF original da edição.",
+          sucesso: {
+            status: 200,
+            quando: "Consulta bem-sucedida.",
+            corpo: `{
+  "results": [
+    { "numero_rpi": 2912, "data_publicacao": "2026-10-27", "despachos": ${opcoes.despachos}, "arquivos": "${base}/2912/arquivos" }
+  ]
+}`,
+          },
+          erros: ERROS_COMUNS,
+          exemplo: `const resposta = await fetch("${BASE_URL}${base}/edicoes", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { results } = await resposta.json();`,
+        },
+        {
+          id: `rpi-${opcoes.id}-lista`,
+          metodo: "GET",
+          caminho: base,
+          titulo: "Buscar despachos publicados",
+          descricao:
+            "Lista paginada de despachos com filtros, que podem ser combinados: o despacho precisa atender a todos. O número do processo vale em qualquer formato, porque só os dígitos contam; nas petições, vale o processo afetado. Todos os campos impressos estão no detalhe.",
+          parametros: [
+            { nome: "rpi", descricao: "Número da edição.", exemplo: "2912" },
+            { nome: "processo", descricao: "Número do processo, em qualquer formato. Nas petições, o processo afetado.", exemplo: opcoes.processoExemplo },
+            { nome: "despacho", descricao: "Código do despacho.", exemplo: opcoes.despachoExemplo },
+            { nome: "titular", descricao: "Trecho do nome do titular.", exemplo: "natura" },
+            { nome: "procurador", descricao: "Trecho do nome do procurador.", exemplo: "dannemann" },
+            { nome: "requerente", descricao: "Trecho do nome do requerente (petições).", exemplo: "ltda" },
+            { nome: "subsecao", descricao: "Trecho da subseção do PDF: concedido, extintos, nulidade, exigência...", exemplo: "concedido" },
+            { nome: "texto", descricao: "Trecho procurado nos detalhes do despacho.", exemplo: "Manual" },
+            { nome: "status", descricao: "Situação da leitura do PDF: ok, alerta ou conferido.", exemplo: "ok" },
+            ...(opcoes.filtroExtra ? [opcoes.filtroExtra] : []),
+            ...PAGINACAO,
+          ],
+          sucesso: {
+            status: 200,
+            quando: "Consulta bem-sucedida. Ordenada da edição mais recente para a mais antiga e, dentro dela, na ordem do PDF. Pode vir vazia.",
+            corpo: `{
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "pages": 1,
+  "results": [
+    ${opcoes.exemploLista}
+  ]
+}`,
+          },
+          erros: [
+            {
+              status: 400,
+              quando: "Parâmetro desconhecido, número inválido, status diferente de ok/alerta/conferido ou `limit` acima de 100.",
+              corpo: `{
+  "status": 400,
+  "message": "Unknown parameter(s): marca. Accepted: ${[...filtros, "page", "limit"].join(", ")}."
+}`,
+            },
+            ...ERROS_COMUNS,
+          ],
+          exemplo: exemploConsulta(base, `?rpi=2912&despacho=${opcoes.despachoExemplo}`),
+        },
+        {
+          id: `rpi-${opcoes.id}-detalhe`,
+          metodo: "GET",
+          caminho: `${base}/{numero_rpi}/{numero_processo}`,
+          titulo: "Detalhar um processo publicado",
+          descricao:
+            "Todos os despachos do processo na edição, na ordem do PDF, com os campos da lista e mais `campos_impressos`: cada campo como impresso, inclusive os que não têm coluna própria. Nas petições, o processo é o afetado. O número vale em qualquer formato.",
+          sucesso: {
+            status: 200,
+            quando: "Processo encontrado na edição.",
+            corpo: `{
+  "numero_rpi": 2912,
+  "numero_processo": "${opcoes.processoExemplo}",
+  "despachos": [
+    {
+      "identificador": "${opcoes.processoExemplo}",
+      "codigo": "${opcoes.despachoExemplo}",
+      ...
+      "campos_impressos": {
+        "Código de despacho": "${opcoes.despachoExemplo}",
+        "Titular": "...",
+        ...
+      },
+      "correcoes": null
+    }
+  ]
+}`,
+          },
+          erros: [
+            {
+              status: 404,
+              quando: "O processo não foi publicado nessa edição.",
+              corpo: `{
+  "status": 404,
+  "message": "${opcoes.erro404}"
+}`,
+            },
+            ...ERROS_COMUNS,
+          ],
+          exemplo: `const resposta = await fetch("${BASE_URL}${base}/2912/${opcoes.processoExemplo}", {
+  headers: { Authorization: \`Bearer \${accessToken}\` },
+});
+
+const { despachos } = await resposta.json();`,
+        },
+      ],
+    },
+  ];
+}
+
 /** Tudo o que a página mostra, na ordem do índice lateral. */
 export const SECOES: SecaoDocs[] = [
   {
@@ -769,6 +1948,18 @@ export const SECOES: SecaoDocs[] = [
     descricao:
       "Dados das bases públicas do Instituto Nacional da Propriedade Industrial: marcas, patentes, desenhos industriais, programas de computador e contratos de transferência de tecnologia.",
     grupos: GRUPOS_INPI,
+  },
+  {
+    id: "rpi",
+    titulo: "RPI — Revista da Propriedade Industrial",
+    descricao:
+      "As publicações semanais do INPI, edição por edição. Enquanto as bases do INPI mostram a situação atual de cada processo, a RPI mostra o que foi publicado em cada semana.",
+    notas: [
+      "As oito seções da revista estão disponíveis. Quatro o INPI publica também em XML (Marcas, Patentes, Programas de computador, Contratos de tecnologia); as outras — Comunicados, Desenhos industriais, Indicações geográficas e Topografias — só em PDF, e os dados delas saem da leitura do PDF.",
+      "Nas seções em PDF, cada registro traz a situação da leitura (`status_extracao`): ok, alerta (alguma conferência automática não fechou — não quer dizer que o dado esteja errado) ou conferido (revisado por uma pessoa). Filtre com `status` se quiser só o que passou em todas as conferências.",
+      "Uma edição nova sai toda terça-feira e fica disponível depois de carregada; consulte o /edicoes da seção (ex.: /api/rpi/patentes/edicoes) para saber a mais recente.",
+    ],
+    grupos: GRUPOS_RPI,
   },
   {
     id: "tmview",

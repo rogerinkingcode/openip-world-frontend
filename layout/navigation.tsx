@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  DocsIcon,
   PlugInIcon,
   QueueIcon,
   TableIcon,
@@ -38,6 +39,11 @@ export const adminItems: NavItem[] = [
     icon: <TableIcon />,
     name: "Atualizações",
     path: "/updates",
+  },
+  {
+    icon: <DocsIcon />,
+    name: "RPI",
+    path: "/rpi",
   },
   {
     icon: <PlugInIcon />,
@@ -86,6 +92,13 @@ export const searchItems: SearchItem[] = [
     description: "Situação dos arquivos do INPI na base",
     path: "/updates",
     icon: <TableIcon />,
+    adminOnly: true,
+  },
+  {
+    name: "RPI",
+    description: "Revista da Propriedade Industrial: arquivos por seção",
+    path: "/rpi",
+    icon: <DocsIcon />,
     adminOnly: true,
   },
   {
