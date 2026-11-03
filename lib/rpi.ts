@@ -34,6 +34,28 @@ export function rotuloArquivo(secao: string, arquivo: RpiArquivo) {
   return arquivo.rotulo;
 }
 
+// O arquivo que a carga de cada seção lê. Mesma regra do subsistema
+// (`arquivoDeDados` de cada serviço de carga): mudar lá exige mudar aqui.
+const ARQUIVO_DE_DADOS: Record<string, (numeroRpi: number) => string> = {
+  marcas: (n) => `RM${n}.zip`,
+  patentes: (n) => `P${n}.zip`,
+  programas_computador: (n) => `PC${n}.zip`,
+  contratos_tecnologia: (n) => `CT${n}.zip`,
+  comunicados: (n) => `Comunicados${n}.pdf`,
+  desenhos_industriais: (n) => `Desenhos_Industriais${n}.pdf`,
+  indicacoes_geograficas: (n) => `Indicacoes_Geograficas${n}.pdf`,
+  topografias_circuitos: (n) => `Topografia_de_circuto_Integrado${n}.pdf`,
+};
+
+// O arquivo de dados que o INPI ainda não publicou (null se já publicou). Os
+// outros arquivos da seção podem estar no bucket: na RPI 2913, Marcas saiu só
+// com os PDFs e o XML veio depois.
+export function arquivoDeDadosFaltando(secao: RpiSecao) {
+  const nome = ARQUIVO_DE_DADOS[secao.secao]?.(secao.numero_rpi);
+  if (!nome) return null;
+  return secao.arquivos.some((arquivo) => arquivo.nome_arquivo === nome) ? null : nome;
+}
+
 // Seções que o INPI publica só em PDF: a leitura grava com alerta o que não
 // passou nas conferências automáticas, e o painel tem a revisão delas.
 export const RPI_SECOES_PDF = new Set([

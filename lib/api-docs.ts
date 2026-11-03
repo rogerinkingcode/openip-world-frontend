@@ -1289,7 +1289,7 @@ const { despachos } = await resposta.json();`,
     id: "rpi-contratos",
     titulo: "Contratos de tecnologia (Seção II)",
     descricao:
-      "Os despachos de averbação e registro de contratos de tecnologia publicados em cada edição da RPI: as partes (cedente e cessionária), os certificados expedidos, com objeto, valor e prazos, e as petições notificadas. Como em Patentes, cada resultado é um despacho.",
+      "Os despachos de averbação e registro de contratos de tecnologia publicados em cada edição da RPI: as partes (cedente e cessionária), os certificados expedidos, com objeto, valor e prazos, e as petições notificadas. Como em Patentes, cada resultado é um despacho. Despacho sem processo — “Pedido inexistente” (140), que traz só a petição recusada — vem com `numero_processo` nulo e é achado pelo filtro `peticao`.",
     endpoints: [
       {
         id: "rpi-contratos-edicoes",
