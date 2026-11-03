@@ -295,7 +295,8 @@ const GRUPOS_INPI: GrupoEndpoints[] = [
   {
     id: "marcas",
     titulo: "Marcas",
-    descricao: "Dados bibliográficos, classificações, titulares, despachos e prioridades das marcas registradas no INPI.",
+    descricao:
+      "Dados bibliográficos, classificações, titulares, despachos e prioridades das marcas registradas no INPI. Cada marca traz também o campo imagem_url: o endereço da imagem da marca, que pode ir direto no src de uma <img>, sem token. Vem null quando a marca não tem imagem.",
     endpoints: [
       ...recurso(
         "marcas",
