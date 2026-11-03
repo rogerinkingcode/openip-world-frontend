@@ -7,7 +7,7 @@ import Skeleton from "@/components/ui/skeleton/Skeleton";
 import { useUser } from "@/context/UserContext";
 import { backendFetch } from "@/lib/api";
 import { dragToScroll } from "@/lib/dragToScroll";
-import { RPI_SECOES, secaoEmEnvio } from "@/lib/rpi";
+import { RPI_SECOES, arquivoDeDadosFaltando, secaoEmEnvio } from "@/lib/rpi";
 import type { RpiOverview, RpiSecao } from "@/lib/types";
 import DeleteSecaoDialog from "./delete-secao-dialog";
 import RpiMonitor from "./rpi-monitor";
@@ -110,7 +110,7 @@ function RpiDashboard() {
           <div role="tablist" aria-label="Seções da RPI" className={TABLIST_CLASS}>
             {RPI_SECOES.map((secao) => {
               const pendentes = (data.secoes[secao.key] ?? []).filter(
-                (row) => !row.download_status,
+                (row) => !row.download_status || arquivoDeDadosFaltando(row),
               ).length;
               const isActive = secao.key === activeKey;
 
@@ -138,7 +138,7 @@ function RpiDashboard() {
                     <Badge
                       size="sm"
                       color="warning"
-                      title={`${pendentes} ${pendentes === 1 ? "edição" : "edições"} com arquivos fora do bucket`}
+                      title={`${pendentes} ${pendentes === 1 ? "edição" : "edições"} com arquivos faltando`}
                     >
                       {pendentes}
                     </Badge>

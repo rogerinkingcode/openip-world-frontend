@@ -12,12 +12,14 @@ import { DocsIcon, TimeIcon } from "@/icons";
 import {
   formatBytes,
   RPI_SECOES_PDF,
+  arquivoDeDadosFaltando,
   rotuloArquivo,
   rpiDownloadPath,
   secaoComFalha,
   secaoEmEnvio,
 } from "@/lib/rpi";
 import type { RpiArquivo, RpiSecao } from "@/lib/types";
+import AvisoIcone from "./aviso-icone";
 import { formatDate, formatDateTime } from "@/lib/updates";
 
 const COLUMNS = [
@@ -108,7 +110,8 @@ export default function RpiTable({
   onDelete: (secao: RpiSecao) => void;
   onRevisar: (secao: RpiSecao) => void;
 }) {
-  const foraDoBucket = rows.filter((row) => !row.download_status).length;
+  // Conta também a edição em que falta o arquivo de dados (ainda não publicado).
+  const foraDoBucket = rows.filter((row) => !row.download_status || arquivoDeDadosFaltando(row)).length;
 
   return (
     <TableCard
@@ -129,7 +132,7 @@ export default function RpiTable({
             <>
               <span className="font-medium text-warning-600 dark:text-orange-400">
                 {foraDoBucket} {foraDoBucket === 1 ? "edição" : "edições"} com
-                arquivos fora do bucket
+                arquivos faltando
               </span>{" "}
               de {rows.length}.
             </>
@@ -170,6 +173,8 @@ function Row({
   // Com a carga feita, o aviso (alertas, "sem publicação") fica no popup de
   // revisão; aqui só o botão muda de cor.
   const comAlerta = Boolean(row.status_detail?.includes("com alerta para conferir"));
+  // O arquivo que a carga lê, se o INPI ainda não o publicou (ex.: o XML de Marcas).
+  const faltando = arquivoDeDadosFaltando(row);
 
   return (
     <TableRow
@@ -200,7 +205,7 @@ function Row({
         </div>
       </TableCell>
       <TableCell className={CELL}>
-        <DownloadBadge row={row} />
+        <DownloadBadge row={row} faltando={faltando} />
       </TableCell>
       <TableCell className={CELL}>
         {row.update_status ? (
@@ -210,21 +215,21 @@ function Row({
             </Badge>
           </div>
         ) : (
-          <div className="flex flex-col gap-1">
-            <Badge
-              size="sm"
-              color="warning"
-              title={
-                row.status_detail ??
-                "Os dados destes arquivos ainda não foram gravados na base"
-              }
-            >
+          <div className="flex items-center gap-1.5">
+            <Badge size="sm" color="warning">
               Aguardando
             </Badge>
-            {row.status_detail && (
-              <span className="max-w-[220px] text-theme-xs leading-tight text-warning-700 dark:text-warning-400">
-                {row.status_detail}
-              </span>
+            {/* Sem o arquivo de dados, a falha gravada ("not in storage") só
+                confunde: o motivo real é o INPI ainda não ter publicado. */}
+            {faltando ? (
+              <AvisoIcone rotulo="Por que está aguardando">
+                Aguardando o INPI publicar {faltando}. O sistema confere de 30 em
+                30 minutos e carrega assim que o arquivo sair.
+              </AvisoIcone>
+            ) : (
+              row.status_detail && (
+                <AvisoIcone rotulo="Motivo">{row.status_detail}</AvisoIcone>
+              )
             )}
           </div>
         )}
@@ -295,7 +300,24 @@ function FileChip({
   );
 }
 
-function DownloadBadge({ row }: { row: RpiSecao }) {
+function DownloadBadge({ row, faltando }: { row: RpiSecao; faltando: string | null }) {
+  // Os arquivos publicados estão no bucket, mas o de dados (o que a carga lê)
+  // o INPI ainda não publicou — não dá para dizer "No bucket" sem ressalva.
+  if (row.download_status && faltando) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Badge size="sm" color="warning">
+          {faltando.toLowerCase().endsWith(".zip") ? "Falta o XML" : "Falta o PDF"}
+        </Badge>
+        <AvisoIcone rotulo="Arquivo que falta">
+          Os arquivos publicados estão no bucket, mas o INPI ainda não publicou{" "}
+          {faltando}, que traz os dados da seção. O sistema confere de 30 em 30
+          minutos e baixa assim que ele sair.
+        </AvisoIcone>
+      </div>
+    );
+  }
+
   if (row.download_status) {
     return (
       <Badge size="sm" color="info" title="Todos os arquivos estão no bucket">
@@ -307,14 +329,19 @@ function DownloadBadge({ row }: { row: RpiSecao }) {
   if (secaoComFalha(row)) {
     const falhas = row.arquivos.filter((a) => !a.download_status && a.status_detail);
     return (
-      <div className="flex flex-col gap-1">
-        <Badge size="sm" color="error" title={falhas[0].status_detail ?? undefined}>
+      <div className="flex items-center gap-1.5">
+        <Badge size="sm" color="error">
           Falhou
         </Badge>
-        <span className="max-w-[220px] text-theme-xs leading-tight text-error-600 dark:text-error-500">
-          {falhas.length} {falhas.length === 1 ? "arquivo" : "arquivos"} — passe
-          o mouse no arquivo para ver o motivo
-        </span>
+        <AvisoIcone tom="error" rotulo="Arquivos que falharam">
+          <ul className="space-y-1">
+            {falhas.map((falha) => (
+              <li key={falha.id}>
+                <span className="font-medium">{falha.nome_arquivo}:</span> {falha.status_detail}
+              </li>
+            ))}
+          </ul>
+        </AvisoIcone>
       </div>
     );
   }
