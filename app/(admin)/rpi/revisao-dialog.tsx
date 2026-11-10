@@ -100,7 +100,7 @@ export default function RevisaoDialog({
   }
 
   return (
-    <Modal isOpen={secao !== null} onClose={onClose} className="max-w-[900px]">
+    <Modal isOpen={secao !== null} onClose={onClose} className="max-w-[900px]" contentClassName="flex flex-col">
       <h4 className="mb-1 pr-12 text-2xl font-semibold text-gray-800 dark:text-white/90">
         Revisar {label} — RPI {shown?.numero_rpi}
       </h4>
@@ -145,10 +145,12 @@ export default function RevisaoDialog({
         ))}
       </div>
 
-      {/* Rolagem própria, com barra visível: a do Modal é escondida, e com o
-          zoom do app a caixa pode passar da altura da janela. Título e abas
-          ficam fixos; só a lista rola. */}
-      <div className="custom-scrollbar mt-5 max-h-[calc(100dvh/var(--app-zoom)-20rem)] min-h-40 space-y-5 overflow-y-auto pr-2">
+      {/* Rolagem própria, com barra visível: a do Modal é escondida. A lista
+          fica com o que sobra da altura da caixa (flex-1), seja qual for o
+          tamanho dos avisos acima — com altura fixa, avisos longos empurravam
+          o fim da lista (e o botão de conferir) para fora da tela. Título e
+          abas ficam fixos; só a lista rola. */}
+      <div className="custom-scrollbar mt-5 min-h-40 flex-1 space-y-5 overflow-y-auto pr-2">
 
         {erro && <p className="text-sm text-error-600 dark:text-error-500">{erro}</p>}
 
