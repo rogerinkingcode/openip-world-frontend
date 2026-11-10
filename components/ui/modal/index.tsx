@@ -8,6 +8,8 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   className?: string;
+  /** Classes da área interna, que rola (ex.: "flex flex-col" para uma lista que rola sozinha). */
+  contentClassName?: string;
   children: React.ReactNode;
   showCloseButton?: boolean;
   // Desligue quando fechar sem querer custa caro (ex.: segredo exibido uma vez).
@@ -25,6 +27,7 @@ export function Modal({
   onClose,
   children,
   className = "",
+  contentClassName = "",
   showCloseButton = true,
   closeOnBackdrop = true,
 }: ModalProps) {
@@ -58,7 +61,7 @@ export function Modal({
       }}
       className={`modal w-modal max-h-modal overflow-hidden rounded-3xl bg-white p-0 text-left text-gray-500 dark:bg-gray-900 dark:text-gray-400 ${className}`}
     >
-      <div className="no-scrollbar relative max-h-modal overflow-y-auto p-6 lg:p-10">
+      <div className={`no-scrollbar relative max-h-modal overflow-y-auto p-6 lg:p-10 ${contentClassName}`}>
         {children}
 
         {/* Depois do conteúdo no DOM: o foco inicial do showModal() cai no primeiro

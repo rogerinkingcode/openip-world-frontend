@@ -1442,7 +1442,7 @@ const { despachos } = await resposta.json();`,
     id: "rpi-indicacoes",
     titulo: "Indicações geográficas (Seção IV)",
     descricao:
-      "Os despachos de Indicação Geográfica publicados em cada edição da RPI. O INPI publica esta seção só em PDF: os campos saem da ficha que abre cada despacho, conferidos contra o índice da revista e o rodapé da ficha, e o texto inteiro do despacho (ficha e anexos, com OCR nas páginas escaneadas) fica disponível para busca. Cada despacho informa como foi lido (`extraido_por`) e a situação da leitura (`status_extracao`): ok (passou em todas as conferências), alerta (alguma conferência não fechou; os motivos vêm em `alertas`) ou conferido (revisado por uma pessoa, com `conferido_em`).",
+      "Os despachos de Indicação Geográfica publicados em cada edição da RPI. O INPI publica esta seção só em PDF: os campos saem da ficha que abre cada despacho, conferidos contra o índice da revista e o rodapé da ficha, e o texto inteiro do despacho (ficha e anexos, com OCR nas páginas escaneadas) fica disponível para busca. Cada despacho informa como foi lido (`extraido_por`) e a situação da leitura (`status_extracao`): ok (passou em todas as conferências), alerta (alguma conferência não fechou; os motivos vêm em `alertas`) ou conferido (revisado por uma pessoa, com `conferido_em`). Nos pedidos de alteração de uma IG já registrada (ex.: códigos 311 e 326), `numero_processo` é o número do registro, `data_deposito` vem nula e a ficha traz `data_registro` e `data_pedido_alteracao`; nos demais despachos essas duas vêm nulas.",
     endpoints: [
       {
         id: "rpi-indicacoes-edicoes",
@@ -1507,6 +1507,8 @@ const ultima = results[0]?.numero_rpi;`,
       "pais": "Brasil",
       "delimitacao": "Compreende os municípios de Nova Friburgo, Cachoeiras de Macacu, ...",
       "data_deposito": "2026-03-05",
+      "data_registro": null,
+      "data_pedido_alteracao": null,
       "requerente": "Sindicato das Indústrias do Vestuário de Nova Friburgo – SINDVEST",
       "procurador": "Marcos Fabricio Welge Gonçalves",
       "despacho": "Comunicação de concessão de registro de reconhecimento de Indicação Geográfica. ...",
